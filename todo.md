@@ -1,3 +1,3 @@
-- [X] init the server
-- [ ] setup the first routes. aka POST /api/shorten
-- [ ] commit it! 
+- [] Hook up the shorten with the handler
+- [] move forwards 
+- [ ] commit. 
