@@ -5,11 +5,17 @@ import (
 	"net/http"
 
 	"github.com/Arush71/url-shortener/internal/handlers"
+	"github.com/Arush71/url-shortener/internal/shortner"
 )
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /api/shorten", handlers.HandleShortening)
+	str := shortner.CreateStorage()
+	handler := &handlers.Handler{
+		Storage: str,
+	}
+	mux.HandleFunc("POST /api/shorten", handler.HandleShortening)
+	mux.HandleFunc("Get /{code}", handler.HandleShortening)
 	server := http.Server{
 		Addr:    ":8080",
 		Handler: mux,

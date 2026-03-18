@@ -1,3 +1,3 @@
-- [] Hook up the shorten with the handler
-- [] move forwards 
+- [x] Hook up the shorten with the handler
+- [x] move forwards 
 - [ ] commit. 

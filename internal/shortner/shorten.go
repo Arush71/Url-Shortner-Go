@@ -4,7 +4,7 @@ import (
 	"math/rand"
 )
 
-func (s *Storage) ShortenUrl(destination string) string {
+func (s *Storage) ShortenUrl() string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	for {
 		b := make([]byte, 6)

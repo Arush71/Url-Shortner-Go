@@ -30,3 +30,17 @@ func (s *Storage) UpdateCounter(url string) {
 	}
 	s.Counter[url]++
 }
+
+func (s *Storage) GetDestination(short_url string) *string {
+	if value, ok := s.Map[short_url]; ok {
+		return &value
+	}
+	return nil
+}
+
+func CreateStorage() *Storage {
+	return &Storage{
+		Map:     make(Mapping),
+		Counter: make(CounterMap),
+	}
+}
