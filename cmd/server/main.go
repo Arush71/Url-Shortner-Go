@@ -15,7 +15,8 @@ func main() {
 		Storage: str,
 	}
 	mux.HandleFunc("POST /api/shorten", handler.HandleShortening)
-	mux.HandleFunc("Get /{code}", handler.HandleShortening)
+	mux.HandleFunc("GET /{code}", handler.Redirect)
+	mux.HandleFunc("GET /stats/{code}", handler.Stats)
 	server := http.Server{
 		Addr:    ":8080",
 		Handler: mux,

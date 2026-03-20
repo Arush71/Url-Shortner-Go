@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/Arush71/url-shortener/internal/helpers"
 	"github.com/Arush71/url-shortener/internal/shortner"
@@ -28,13 +30,18 @@ func (handler *Handler) HandleShortening(w http.ResponseWriter, r *http.Request)
 		})
 		return
 	}
+	url, err := url.Parse(*req.Url)
+	if err != nil || url.Host == "" || url.Scheme == "" {
+		helpers.WriteError(w, http.StatusBadRequest, helpers.ErrorResponse{Error: "Invalid Url."})
+		return
+	}
 	shortUrl := handler.Storage.ShortenUrl()
-	handler.Storage.StoreUrl(shortUrl, *req.Url)
+	handler.Storage.Store(shortUrl, *req.Url)
 	type CreateShortURLResp struct {
 		ShortURL string `json:"short_url"`
 	}
 	helpers.WriteJson(w, http.StatusCreated, CreateShortURLResp{
-		ShortURL: shortUrl,
+		ShortURL: fmt.Sprintf("http://localhost:8080/%s", shortUrl),
 	})
 }
 
@@ -49,5 +56,27 @@ func (handler *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteError(w, http.StatusNotFound, helpers.ErrorResponse{Error: "Url Not Found"})
 		return
 	}
-	// todo: think about redirecting the user to the destination, and how to validate the url, and handle delineations.
+	handler.Storage.UpdateCounter(code)
+	http.Redirect(w, r, *destination, http.StatusFound)
+}
+
+func (handler *Handler) Stats(w http.ResponseWriter, r *http.Request) {
+	code := r.PathValue("code")
+	if code == "" {
+		helpers.WriteError(w, http.StatusBadRequest, helpers.ErrorResponse{Error: "Path must be valid."})
+		return
+	}
+	url, counter, err := handler.Storage.GetStats(code)
+	if err == nil {
+		type ResStat struct {
+			Url     string `json:"url"`
+			Counter int    `json:"counter"`
+		}
+		helpers.WriteJson(w, http.StatusOK, ResStat{
+			Url:     url,
+			Counter: counter,
+		})
+		return
+	}
+	helpers.WriteError(w, http.StatusNotFound, helpers.ErrorResponse{Error: err.Error()})
 }
