@@ -35,8 +35,10 @@ func (handler *Handler) HandleShortening(w http.ResponseWriter, r *http.Request)
 		helpers.WriteError(w, http.StatusBadRequest, helpers.ErrorResponse{Error: "Invalid Url."})
 		return
 	}
+	handler.Storage.Mu.Lock()
 	shortUrl := handler.Storage.ShortenUrl()
 	handler.Storage.Store(shortUrl, *req.Url)
+	handler.Storage.Mu.Unlock()
 	type CreateShortURLResp struct {
 		ShortURL string `json:"short_url"`
 	}
@@ -51,12 +53,15 @@ func (handler *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteError(w, http.StatusBadRequest, helpers.ErrorResponse{Error: "Path must be valid."})
 		return
 	}
+	handler.Storage.Mu.Lock()
 	destination := handler.Storage.GetDestination(code)
 	if destination == nil {
 		helpers.WriteError(w, http.StatusNotFound, helpers.ErrorResponse{Error: "Url Not Found"})
+		handler.Storage.Mu.Unlock()
 		return
 	}
 	handler.Storage.UpdateCounter(code)
+	handler.Storage.Mu.Unlock()
 	http.Redirect(w, r, *destination, http.StatusFound)
 }
 
@@ -66,7 +71,9 @@ func (handler *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteError(w, http.StatusBadRequest, helpers.ErrorResponse{Error: "Path must be valid."})
 		return
 	}
+	handler.Storage.Mu.Lock()
 	url, counter, err := handler.Storage.GetStats(code)
+	handler.Storage.Mu.Unlock()
 	if err == nil {
 		type ResStat struct {
 			Url     string `json:"url"`

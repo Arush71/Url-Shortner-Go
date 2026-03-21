@@ -1,3 +1,3 @@
-- [x] Hook up the shorten with the handler
-- [x] move forwards 
-- [ ] commit. 
+- [] Start with creating the db queries.
+- [] sqlc generate.
+- [] And Figure out what else to do.

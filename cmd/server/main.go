@@ -6,9 +6,12 @@ import (
 
 	"github.com/Arush71/url-shortener/internal/handlers"
 	"github.com/Arush71/url-shortener/internal/shortner"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 func main() {
+	godotenv.Load()
 	mux := http.NewServeMux()
 	str := shortner.CreateStorage()
 	handler := &handlers.Handler{

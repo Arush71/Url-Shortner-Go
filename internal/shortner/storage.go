@@ -1,6 +1,9 @@
 package shortner
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 type Mapping map[string]string
 
@@ -8,25 +11,17 @@ type CounterMap map[string]int
 type Storage struct {
 	Map     Mapping
 	Counter CounterMap
+	Mu      sync.Mutex
 }
 
 func (s *Storage) Store(url string, destination string) {
-	if s.Map == nil {
-		s.Map = make(Mapping)
-	}
 	s.Map[url] = destination
-	if s.Counter == nil {
-		s.Counter = make(CounterMap)
-	}
 	if _, exist := s.Counter[url]; !exist {
 		s.Counter[url] = 0
 	}
 }
 
 func (s *Storage) UpdateCounter(short_url string) {
-	if s.Counter == nil {
-		s.Counter = make(CounterMap)
-	}
 	if _, exist := s.Counter[short_url]; !exist {
 		return
 	}
