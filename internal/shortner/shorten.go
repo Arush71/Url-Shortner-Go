@@ -1,25 +1,22 @@
 package shortner
 
-import (
-	"math/rand"
-)
-
-func (s *Storage) ShortenUrl() string {
+func GetCodeFromId(id int64) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	for {
-		b := make([]byte, 6)
-		for i := range 6 {
-			randN := rand.Intn(len(charset))
-			b[i] = charset[randN]
-		}
-		strB := string(b)
-		if s.Map == nil {
-			return strB
-		}
-		if _, exist := s.Map[strB]; exist {
-			continue
-		}
-		return strB
-
+	result := make([]byte, 0, 10)
+	if id == 0 {
+		return string(charset[0])
 	}
+	for id > 0 {
+		remainder := id % 62
+		result = append(result, charset[remainder])
+		id /= 62
+	}
+	left := 0
+	right := len(result) - 1
+	for left < right {
+		result[left], result[right] = result[right], result[left]
+		left++
+		right--
+	}
+	return string(result)
 }
