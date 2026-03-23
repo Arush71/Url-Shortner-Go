@@ -22,3 +22,10 @@ SELECT
     created_at
 FROM URLS
 WHERE code = $1;
+
+
+-- name: UpdateCounter :exec
+
+UPDATE URLS
+SET counter = counter + $2
+WHERE code = $1;

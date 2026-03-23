@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/Arush71/url-shortener/internal/cache"
 	"github.com/Arush71/url-shortener/internal/db"
 	"github.com/Arush71/url-shortener/internal/helpers"
 	"github.com/Arush71/url-shortener/internal/shortner"
 )
 
 type Handler struct {
+	C      *cache.Cache
 	Q      *db.Queries
 	DB     *sql.DB
 	AppUrl string
@@ -66,6 +68,7 @@ func (handler *Handler) HandleShortening(w http.ResponseWriter, r *http.Request)
 		helpers.WriteError(w, http.StatusInternalServerError, helpers.ErrorResponse{Error: "INTERNAL_SERVER_ERROR"})
 		return
 	}
+	handler.C.SaveUrl(code, *req.Url)
 	type CreateShortURLResp struct {
 		ShortURL string `json:"short_url"`
 	}
@@ -80,16 +83,28 @@ func (handler *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteError(w, http.StatusBadRequest, helpers.ErrorResponse{Error: "BAD_REQUEST"})
 		return
 	}
-	originalUrl, err := handler.Q.UpdateAndRedirect(r.Context(), code)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			helpers.WriteError(w, http.StatusNotFound, helpers.ErrorResponse{Error: "BAD_REQUEST"})
+	originalUrl, ok := handler.C.GetUrl(code)
+	if ok {
+		fmt.Println("We are caching let's goo.")
+		if err := handler.Q.UpdateCounter(r.Context(), db.UpdateCounterParams{Code: code, Counter: 1}); err != nil {
+			helpers.WriteError(w, http.StatusInternalServerError, helpers.ErrorResponse{Error: "INTERNAL_SERVER_ERROR"})
 			return
 		}
-		helpers.WriteError(w, http.StatusInternalServerError, helpers.ErrorResponse{Error: "INTERNAL_SERVER_ERROR"})
-		return
+	} else {
+		var err error
+		originalUrl, err = handler.Q.UpdateAndRedirect(r.Context(), code)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				helpers.WriteError(w, http.StatusNotFound, helpers.ErrorResponse{Error: "NOT_FOUND"})
+				return
+			}
+			helpers.WriteError(w, http.StatusInternalServerError, helpers.ErrorResponse{Error: "INTERNAL_SERVER_ERROR"})
+			return
+		}
+		handler.C.SaveUrl(code, originalUrl)
 	}
-	http.Redirect(w, r, originalUrl, http.StatusFound)
+	// http.Redirect(w, r, originalUrl, http.StatusFound)
+	helpers.WriteJson(w, http.StatusOK, originalUrl)
 }
 
 func (handler *Handler) Stats(w http.ResponseWriter, r *http.Request) {

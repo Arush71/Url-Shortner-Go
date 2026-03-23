@@ -56,9 +56,9 @@ WHERE code = $1
 `
 
 type GetStatsRow struct {
-	OriginalUrl string    `json:"original_url"`
-	Counter     int64     `json:"counter"`
-	CreatedAt   time.Time `json:"created_at"`
+	OriginalUrl string
+	Counter     int64
+	CreatedAt   time.Time
 }
 
 func (q *Queries) GetStats(ctx context.Context, code string) (GetStatsRow, error) {
@@ -81,4 +81,21 @@ func (q *Queries) UpdateAndRedirect(ctx context.Context, code string) (string, e
 	var original_url string
 	err := row.Scan(&original_url)
 	return original_url, err
+}
+
+const updateCounter = `-- name: UpdateCounter :exec
+
+UPDATE URLS
+SET counter = counter + $2
+WHERE code = $1
+`
+
+type UpdateCounterParams struct {
+	Code    string
+	Counter int64
+}
+
+func (q *Queries) UpdateCounter(ctx context.Context, arg UpdateCounterParams) error {
+	_, err := q.db.ExecContext(ctx, updateCounter, arg.Code, arg.Counter)
+	return err
 }

@@ -6,3 +6,8 @@
 - [x] Figure out the rest
 v2 done.
 
+v3.
+
+- [x] Make in-memory cache
+- [x] Test the new cache
+- [x] Figure out what else to add and stuff.

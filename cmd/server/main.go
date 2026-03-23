@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Arush71/url-shortener/internal/cache"
 	"github.com/Arush71/url-shortener/internal/db"
 	"github.com/Arush71/url-shortener/internal/handlers"
 	"github.com/joho/godotenv"
@@ -23,7 +24,9 @@ func main() {
 	}
 	dbQuery := db.New(database)
 	mux := http.NewServeMux()
+	C := cache.SetupCache(dbQuery)
 	handler := &handlers.Handler{
+		C:      C,
 		Q:      dbQuery,
 		DB:     database,
 		AppUrl: APP_URL,
