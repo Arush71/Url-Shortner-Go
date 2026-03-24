@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Arush71/url-shortener/internal/cache"
 	"github.com/Arush71/url-shortener/internal/db"
@@ -25,6 +26,13 @@ func main() {
 	dbQuery := db.New(database)
 	mux := http.NewServeMux()
 	C := cache.SetupCache(dbQuery)
+	go func() {
+		ticker := time.NewTicker(4 * time.Second)
+		for {
+			<-ticker.C
+			C.Flush()
+		}
+	}()
 	handler := &handlers.Handler{
 		C:      C,
 		Q:      dbQuery,

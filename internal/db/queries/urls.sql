@@ -6,12 +6,12 @@ SELECT nextval('public.urls_id_seq');
 INSERT INTO URLS ( id, code, original_url, counter, updated_at) 
 VALUES ($1,$2,$3,$4 , NOW());
 
--- name: UpdateAndRedirect :one
+-- name: GetOriginalUrl :one
 
-UPDATE URLS
-SET counter = counter + 1
-WHERE code = $1
-RETURNING original_url;
+SELECT
+    original_url
+FROM URLS
+WHERE code = $1;
 
 
 -- name: GetStats :one

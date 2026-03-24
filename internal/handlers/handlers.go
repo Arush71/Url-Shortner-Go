@@ -85,14 +85,10 @@ func (handler *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	}
 	originalUrl, ok := handler.C.GetUrl(code)
 	if ok {
-		fmt.Println("We are caching let's goo.")
-		if err := handler.Q.UpdateCounter(r.Context(), db.UpdateCounterParams{Code: code, Counter: 1}); err != nil {
-			helpers.WriteError(w, http.StatusInternalServerError, helpers.ErrorResponse{Error: "INTERNAL_SERVER_ERROR"})
-			return
-		}
+		handler.C.IncrementCounter(code)
 	} else {
 		var err error
-		originalUrl, err = handler.Q.UpdateAndRedirect(r.Context(), code)
+		originalUrl, err = handler.Q.GetOriginalUrl(r.Context(), code)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				helpers.WriteError(w, http.StatusNotFound, helpers.ErrorResponse{Error: "NOT_FOUND"})
@@ -102,6 +98,7 @@ func (handler *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		handler.C.SaveUrl(code, originalUrl)
+		handler.C.IncrementCounter(code)
 	}
 	// http.Redirect(w, r, originalUrl, http.StatusFound)
 	helpers.WriteJson(w, http.StatusOK, originalUrl)

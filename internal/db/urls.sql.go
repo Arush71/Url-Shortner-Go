@@ -45,6 +45,21 @@ func (q *Queries) GetNextURLID(ctx context.Context) (int64, error) {
 	return nextval, err
 }
 
+const getOriginalUrl = `-- name: GetOriginalUrl :one
+
+SELECT
+    original_url
+FROM URLS
+WHERE code = $1
+`
+
+func (q *Queries) GetOriginalUrl(ctx context.Context, code string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getOriginalUrl, code)
+	var original_url string
+	err := row.Scan(&original_url)
+	return original_url, err
+}
+
 const getStats = `-- name: GetStats :one
 
 SELECT 
@@ -66,21 +81,6 @@ func (q *Queries) GetStats(ctx context.Context, code string) (GetStatsRow, error
 	var i GetStatsRow
 	err := row.Scan(&i.OriginalUrl, &i.Counter, &i.CreatedAt)
 	return i, err
-}
-
-const updateAndRedirect = `-- name: UpdateAndRedirect :one
-
-UPDATE URLS
-SET counter = counter + 1
-WHERE code = $1
-RETURNING original_url
-`
-
-func (q *Queries) UpdateAndRedirect(ctx context.Context, code string) (string, error) {
-	row := q.db.QueryRowContext(ctx, updateAndRedirect, code)
-	var original_url string
-	err := row.Scan(&original_url)
-	return original_url, err
 }
 
 const updateCounter = `-- name: UpdateCounter :exec
