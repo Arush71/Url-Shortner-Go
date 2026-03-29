@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/Arush71/url-shortener/internal/cache"
 	"github.com/Arush71/url-shortener/internal/db"
@@ -72,6 +73,7 @@ func (handler *Handler) HandleShortening(w http.ResponseWriter, r *http.Request)
 	type CreateShortURLResp struct {
 		ShortURL string `json:"short_url"`
 	}
+
 	helpers.WriteJson(w, http.StatusCreated, CreateShortURLResp{
 		ShortURL: fmt.Sprintf("%s/%s", handler.AppUrl, code),
 	})
@@ -100,8 +102,7 @@ func (handler *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		handler.C.SaveUrl(code, originalUrl)
 		handler.C.IncrementCounter(code)
 	}
-	// http.Redirect(w, r, originalUrl, http.StatusFound)
-	helpers.WriteJson(w, http.StatusOK, originalUrl)
+	http.Redirect(w, r, originalUrl, http.StatusFound)
 }
 
 func (handler *Handler) Stats(w http.ResponseWriter, r *http.Request) {
@@ -119,5 +120,18 @@ func (handler *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteError(w, http.StatusInternalServerError, helpers.ErrorResponse{Error: "INTERNAL_SERVER_ERROR"})
 		return
 	}
-	helpers.WriteJson(w, http.StatusOK, stats)
+	extraCount, ok := handler.C.GetCounter(code)
+	if ok {
+		stats.Counter += extraCount
+	}
+	type RStats struct {
+		OriginalUrl string    `json:"original_url"`
+		Counter     int64     `json:"counter"`
+		Created_At  time.Time `json:"created_at"`
+	}
+	helpers.WriteJson(w, http.StatusOK, RStats{
+		Counter:     stats.Counter,
+		OriginalUrl: stats.OriginalUrl,
+		Created_At:  stats.CreatedAt,
+	})
 }

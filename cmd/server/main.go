@@ -11,6 +11,7 @@ import (
 	"github.com/Arush71/url-shortener/internal/cache"
 	"github.com/Arush71/url-shortener/internal/db"
 	"github.com/Arush71/url-shortener/internal/handlers"
+	"github.com/Arush71/url-shortener/internal/middleware"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -23,11 +24,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if err := database.Ping(); err != nil {
+		log.Fatal(err)
+	}
 	dbQuery := db.New(database)
 	mux := http.NewServeMux()
 	C := cache.SetupCache(dbQuery)
 	go func() {
-		ticker := time.NewTicker(4 * time.Second)
+		ticker := time.NewTicker(30 * time.Second)
 		for {
 			<-ticker.C
 			C.Flush()
@@ -39,13 +43,15 @@ func main() {
 		DB:     database,
 		AppUrl: APP_URL,
 	}
-	mux.HandleFunc("POST /api/shorten", handler.HandleShortening)
-	mux.HandleFunc("GET /{code}", handler.Redirect)
-	mux.HandleFunc("GET /stats/{code}", handler.Stats)
+	ipManager := middleware.SetupIpManager()
+	mux.HandleFunc("POST /api/shorten", ipManager.RateLimitMiddleware(20)(handler.HandleShortening))
+	mux.HandleFunc("GET /{code}", ipManager.RateLimitMiddleware(150)(handler.Redirect))
+	mux.HandleFunc("GET api/stats/{code}", ipManager.RateLimitMiddleware(35)(handler.Stats))
+	go ipManager.CleanUpIp()
 	server := http.Server{
 		Addr:    ":8080",
 		Handler: mux,
 	}
 	fmt.Println("server started listening....")
-	server.ListenAndServe()
+	log.Fatal(server.ListenAndServe())
 }

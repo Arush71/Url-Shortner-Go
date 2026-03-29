@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"maps"
 	"sync"
 	"time"
 
@@ -14,13 +15,13 @@ type CounterMap map[string]int64
 type Cache struct {
 	CMap     CacheMap
 	CounterM CounterMap
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	Q        *db.Queries
 }
 
 func (c *Cache) GetUrl(code string) (string, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	if value, ok := c.CMap[code]; ok {
 		return value, true
 	}
@@ -39,20 +40,20 @@ func SetupCache(Q *db.Queries) *Cache {
 		Q:        Q,
 	}
 }
+
 func (c *Cache) IncrementCounter(code string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if _, ok := c.CounterM[code]; ok {
-		c.CounterM[code]++
-		return
-	}
-	c.CounterM[code] = 1
+	c.CounterM[code]++
 }
 
 func (c *Cache) Flush() {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	for k, v := range c.CounterM {
+	localCopy := make(map[string]int64)
+	maps.Copy(localCopy, c.CounterM)
+	c.CounterM = make(CounterMap)
+	c.mu.Unlock()
+	for k, v := range localCopy {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		err := c.Q.UpdateCounter(ctx, db.UpdateCounterParams{
 			Code:    k,
@@ -60,7 +61,21 @@ func (c *Cache) Flush() {
 		})
 		cancel()
 		if err == nil {
-			delete(c.CounterM, k)
+			delete(localCopy, k)
 		}
 	}
+	if len(localCopy) != 0 {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		for k, v := range localCopy {
+			c.CounterM[k] += v
+		}
+	}
+}
+
+func (c *Cache) GetCounter(code string) (int64, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	val, ok := c.CounterM[code]
+	return val, ok
 }
