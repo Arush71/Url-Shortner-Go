@@ -20,6 +20,17 @@ func main() {
 	godotenv.Load()
 	dbUrl := os.Getenv("DB_URL")
 	APP_URL := os.Getenv("APP_URL")
+	PORT := os.Getenv("PORT")
+	if PORT == "" {
+		PORT = "8080"
+	}
+	if dbUrl == "" {
+		log.Fatal("DB_URL not set")
+	}
+
+	if APP_URL == "" {
+		APP_URL = "http://localhost:8080"
+	}
 	database, err := sql.Open("postgres", dbUrl)
 	if err != nil {
 		log.Fatal(err)
