@@ -46,7 +46,18 @@ func main() {
 	ipManager := middleware.SetupIpManager()
 	mux.HandleFunc("POST /api/shorten", ipManager.RateLimitMiddleware(20)(handler.HandleShortening))
 	mux.HandleFunc("GET /{code}", ipManager.RateLimitMiddleware(150)(handler.Redirect))
-	mux.HandleFunc("GET api/stats/{code}", ipManager.RateLimitMiddleware(35)(handler.Stats))
+	mux.HandleFunc("GET /api/stats/{code}", ipManager.RateLimitMiddleware(35)(handler.Stats))
+	// Frontent Routes
+	mux.HandleFunc("GET /stats.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/stats.html")
+	})
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		http.ServeFile(w, r, "static/index.html")
+	})
 	go ipManager.CleanUpIp()
 	server := http.Server{
 		Addr:    ":8080",
